@@ -1,0 +1,123 @@
+// Tooltip.cs (Asset Store Ready with Width-Based Wrapping)
+using System.Text;
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+
+[RequireComponent(typeof(CanvasGroup))]
+public class Tooltip : MonoBehaviour
+{
+    [Header("UI References")]
+    public GameObject header;
+    public TextMeshProUGUI titleField;
+    public TextMeshProUGUI contentField;
+    public Image iconField;
+
+    /// <summary>
+    /// Populates the UI elements. Text formatting is now handled by measuring width.
+    /// </summary>
+    public void SetText(string content, string title, Sprite icon, Color titleColor, Color iconColor, float titleWidth, float contentWidth)
+    {
+        // Format the text with smart line breaks based on max width before assigning it.
+        string formattedTitle = FormatTextByWidth(title, titleWidth, titleField);
+        string formattedContent = FormatTextByWidth(content, contentWidth, contentField);
+
+        // Set Title and its Color
+        bool hasTitle = !string.IsNullOrEmpty(title);
+        if (titleField != null)
+        {
+            titleField.gameObject.SetActive(hasTitle);
+            if (hasTitle)
+            {
+                titleField.text = formattedTitle;
+                titleField.color = titleColor;
+            }
+        }
+
+        // Set Content
+        if (contentField != null)
+        {
+            contentField.text = formattedContent;
+        }
+
+        // Set Icon and its Color
+        bool hasIcon = (icon != null);
+        if (iconField != null)
+        {
+            iconField.gameObject.SetActive(hasIcon);
+            if (hasIcon)
+            {
+                iconField.sprite = icon;
+                iconField.color = iconColor;
+            }
+        }
+
+        // Conditionally hide the entire header area
+        if (header != null)
+        {
+            header.SetActive(hasTitle || hasIcon);
+        }
+    }
+
+    /// <summary>
+    /// A helper method that inserts newlines to wrap text based on a max pixel width,
+    /// respecting existing newlines and not breaking words.
+    /// </summary>
+    private string FormatTextByWidth(string text, float maxWidth, TextMeshProUGUI textMesh)
+    {
+        // If wrapping is disabled or the text is empty, return it as is.
+        if (maxWidth <= 0 || string.IsNullOrEmpty(text) || textMesh == null)
+        {
+            return text;
+        }
+
+        StringBuilder finalSb = new StringBuilder();
+        // First, split the text by any user-defined newlines.
+        string[] lines = text.Split('\n');
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            // Check if this entire pre-split line already fits.
+            if (textMesh.GetPreferredValues(line).x <= maxWidth)
+            {
+                finalSb.Append(line);
+            }
+            else // This line needs to be broken down further.
+            {
+                StringBuilder lineSb = new StringBuilder();
+                string[] words = line.Split(' ');
+
+                // Start with the first word.
+                lineSb.Append(words[0]);
+
+                for (int j = 1; j < words.Length; j++)
+                {
+                    // Check the width of the current line plus the next word.
+                    string testString = lineSb.ToString() + " " + words[j];
+                    if (textMesh.GetPreferredValues(testString).x > maxWidth)
+                    {
+                        // The line is too long, so add a newline and start a new line.
+                        lineSb.Append('\n');
+                        lineSb.Append(words[j]);
+                    }
+                    else
+                    {
+                        // The word fits, so add it to the current line.
+                        lineSb.Append(" ");
+                        lineSb.Append(words[j]);
+                    }
+                }
+                finalSb.Append(lineSb.ToString());
+            }
+
+            // Add the user-defined newline back, but not for the very last line.
+            if (i < lines.Length - 1)
+            {
+                finalSb.Append('\n');
+            }
+        }
+
+        return finalSb.ToString();
+    }
+}

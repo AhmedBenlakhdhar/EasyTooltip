@@ -1,0 +1,61 @@
+// TooltipTrigger.cs (Asset Store Ready)
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+/// <summary>
+/// A data structure to hold all the content and style information for a tooltip.
+/// </summary>
+public struct TooltipData
+{
+    public string title;
+    public string content;
+    public Sprite icon;
+    public Color titleColor;
+    public Color iconColor;
+    public int characterWrapLimit;
+}
+
+public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    [Header("Tooltip Content")]
+    public string title;
+    [TextArea(3, 10)]
+    public string content;
+    public Sprite icon;
+
+    [Header("Custom Styles")]
+    [Tooltip("The color to apply to the title text.")]
+    public Color titleColor = Color.white;
+    [Tooltip("The color to tint the icon. White means no tint.")]
+    public Color iconColor = Color.white;
+
+    [Header("Layout Settings")]
+    [Tooltip("The number of characters in the title or content before the tooltip's width is constrained.")]
+    public int characterWrapLimit = 70;
+
+    [Header("Timing Settings")]
+    [Tooltip("The time in seconds the user must hover before the tooltip appears.")]
+    public float hoverDelay = 0.5f;
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        // Populate the data struct with all the information for this trigger.
+        TooltipData data = new TooltipData
+        {
+            title = this.title,
+            content = this.content,
+            icon = this.icon,
+            titleColor = this.titleColor,
+            iconColor = this.iconColor,
+            characterWrapLimit = this.characterWrapLimit
+        };
+
+        // Pass the single data object to the manager.
+        TooltipManager.Instance.ShowTooltip(data, hoverDelay);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        TooltipManager.Instance.HideTooltip();
+    }
+}

@@ -1,0 +1,160 @@
+// TooltipManager.cs (Definitive "Last Command Wins" Architecture)
+using System.Collections;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TooltipManager : MonoBehaviour
+{
+    public static TooltipManager Instance;
+
+    public Tooltip tooltipPrefab;
+    public float fadeDuration = 0.2f;
+
+    private Tooltip tooltipInstance;
+    private RectTransform tooltipRectTransform;
+    private CanvasGroup tooltipCanvasGroup;
+    private Coroutine activeCoroutine;
+
+    private void Awake()
+    {
+        if (Instance == null) { Instance = this; }
+        else { Destroy(gameObject); }
+    }
+
+    private void Start()
+    {
+        GameObject tooltipObject = Instantiate(tooltipPrefab.gameObject, transform);
+        tooltipInstance = tooltipObject.GetComponent<Tooltip>();
+        tooltipRectTransform = tooltipObject.GetComponent<RectTransform>();
+        tooltipCanvasGroup = tooltipInstance.GetComponent<CanvasGroup>();
+        tooltipInstance.gameObject.SetActive(false);
+    }
+
+    private void Update()
+    {
+        // Only position the tooltip when it's fully visible and done resizing.
+        if (tooltipInstance.gameObject.activeSelf && tooltipCanvasGroup.alpha >= 1)
+        {
+            PositionTooltip();
+        }
+    }
+
+    // The trigger calls this to START the show process
+    public void ShowTooltip(string content, string title, Sprite icon, float delay)
+    {
+        // "Last Command Wins": Stop whatever was happening before.
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+
+        // Start the new show process.
+        activeCoroutine = StartCoroutine(ShowRoutine(content, title, icon, delay));
+    }
+
+    // The trigger calls this to START the hide process
+    public void HideTooltip()
+    {
+        // "Last Command Wins": Stop whatever was happening before.
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+
+        // Start the new hide process.
+        activeCoroutine = StartCoroutine(FadeOut());
+    }
+
+    private IEnumerator ShowRoutine(string content, string title, Sprite icon, float delay)
+    {
+        // 1. Instantly hide the tooltip to prepare for the new content.
+        // This prevents the old content from being visible while we wait.
+        tooltipCanvasGroup.alpha = 0;
+        tooltipInstance.gameObject.SetActive(false);
+
+        // 2. Wait for the initial hover delay.
+        yield return new WaitForSeconds(delay);
+
+        // 3. Set the new text content.
+        tooltipInstance.SetText(content, title, icon);
+
+        // 4. Force the resize using the "triple cycle" method you discovered.
+        // This happens while the tooltip is still invisible.
+        for (int i = 0; i < 3; i++)
+        {
+            tooltipInstance.gameObject.SetActive(true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(tooltipRectTransform);
+            yield return new WaitForEndOfFrame();
+            tooltipInstance.gameObject.SetActive(false);
+        }
+
+        // 5. Now that the size is correct, activate it for real.
+        tooltipInstance.gameObject.SetActive(true);
+        PositionTooltip();
+        transform.SetAsLastSibling();
+
+        // 6. Finally, fade it in smoothly.
+        yield return FadeIn();
+    }
+
+    private void PositionTooltip()
+    {
+        var rt = tooltipInstance.GetComponent<RectTransform>();
+        var parent = rt.parent as RectTransform;
+        var canvas = rt.GetComponentInParent<Canvas>();
+        if (rt == null || parent == null || canvas == null) return;
+
+        // screen -> local of the tooltip's parent (important)
+        Vector2 localPoint;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parent,
+            Input.mousePosition,
+            canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera,
+            out localPoint
+        );
+
+        // ensure layout/size is up-to-date if the tooltip resizes on show
+        Canvas.ForceUpdateCanvases();
+        // LayoutRebuilder.ForceRebuildLayoutImmediate(rt); // enable only if you use Layout components
+
+        // place pivot at mouse (in parent local space)
+        rt.localPosition = localPoint;
+
+        // get corners (local to the tooltip pivot) and convert to parent local by adding localPoint
+        Vector3[] corners = new Vector3[4];
+        rt.GetLocalCorners(corners); // 0 = bottom-left, 2 = top-right
+
+        float minX = localPoint.x + corners[0].x;
+        float maxX = localPoint.x + corners[2].x;
+        float minY = localPoint.y + corners[0].y;
+        float maxY = localPoint.y + corners[2].y;
+
+        Vector2 offset = Vector2.zero;
+        if (minX < parent.rect.xMin) offset.x = parent.rect.xMin - minX;
+        else if (maxX > parent.rect.xMax) offset.x = parent.rect.xMax - maxX;
+
+        if (minY < parent.rect.yMin) offset.y = parent.rect.yMin - minY;
+        else if (maxY > parent.rect.yMax) offset.y = parent.rect.yMax - maxY;
+
+        rt.localPosition = localPoint + offset;
+    }
+
+
+    private IEnumerator FadeIn()
+    {
+        float startTime = Time.unscaledTime;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(0, 1, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 1;
+    }
+
+    private IEnumerator FadeOut()
+    {
+        float startTime = Time.unscaledTime;
+        float startAlpha = tooltipCanvasGroup.alpha;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 0;
+        tooltipInstance.gameObject.SetActive(false);
+    }
+}

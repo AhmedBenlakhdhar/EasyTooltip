@@ -1,0 +1,112 @@
+// Tooltip.cs (Asset Store Ready with Smart Wrapping)
+using System.Text;
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+
+[RequireComponent(typeof(CanvasGroup))]
+public class Tooltip : MonoBehaviour
+{
+    [Header("UI References")]
+    public GameObject header;
+    public TextMeshProUGUI titleField;
+    public TextMeshProUGUI contentField;
+    public Image iconField;
+
+    [Header("Text Wrapping")]
+    [Tooltip("The maximum number of characters before the title will wrap to a new line.")]
+    public int titleCharacterWrapLimit = 30;
+    [Tooltip("The maximum number of characters before the content will wrap to a new line.")]
+    public int contentCharacterWrapLimit = 70;
+
+    /// <summary>
+    /// Populates the UI elements with the provided content and styles.
+    /// </summary>
+    public void SetText(string content, string title = "", Sprite icon = null, Color titleColor = default, Color iconColor = default)
+    {
+        // --- THIS IS THE NEW LOGIC ---
+        // Format the text with smart line breaks before assigning it.
+        string formattedTitle = FormatTextWithLineBreaks(title, titleCharacterWrapLimit);
+        string formattedContent = FormatTextWithLineBreaks(content, contentCharacterWrapLimit);
+
+        // Set Title and its Color
+        bool hasTitle = !string.IsNullOrEmpty(title);
+        if (titleField != null)
+        {
+            titleField.gameObject.SetActive(hasTitle);
+            if (hasTitle)
+            {
+                titleField.text = formattedTitle;
+                titleField.color = titleColor;
+            }
+        }
+
+        // Set Content
+        if (contentField != null)
+        {
+            contentField.text = formattedContent;
+        }
+
+        // Set Icon and its Color
+        bool hasIcon = (icon != null);
+        if (iconField != null)
+        {
+            iconField.gameObject.SetActive(hasIcon);
+            if (hasIcon)
+            {
+                iconField.sprite = icon;
+                iconField.color = iconColor;
+            }
+        }
+
+        // Conditionally hide the entire header area
+        if (header != null)
+        {
+            header.SetActive(hasTitle || hasIcon);
+        }
+    }
+
+    /// <summary>
+    /// A helper method to insert newline characters into a string to enforce a max line width,
+    /// without breaking words.
+    /// </summary>
+    private string FormatTextWithLineBreaks(string text, int maxLineLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLineLength)
+        {
+            return text;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        int currentPosition = 0;
+
+        while (currentPosition < text.Length)
+        {
+            // If the remaining text is shorter than the max length, just append it and finish.
+            if (text.Length - currentPosition <= maxLineLength)
+            {
+                sb.Append(text.Substring(currentPosition));
+                break;
+            }
+
+            // Find the last space within the max line length.
+            int breakPosition = text.LastIndexOf(' ', currentPosition + maxLineLength, maxLineLength);
+
+            // If no space was found (e.g., one very long word),
+            // force a break at the max length to avoid an infinite loop.
+            if (breakPosition <= currentPosition)
+            {
+                breakPosition = currentPosition + maxLineLength;
+            }
+
+            // Append the line and a newline character.
+            sb.Append(text.Substring(currentPosition, breakPosition - currentPosition));
+            sb.Append('\n');
+
+            // Move the current position to after the space for the next line.
+            currentPosition = breakPosition + 1;
+        }
+
+        return sb.ToString();
+    }
+}

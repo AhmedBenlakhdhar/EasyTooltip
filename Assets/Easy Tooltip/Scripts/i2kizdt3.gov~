@@ -1,0 +1,107 @@
+// TooltipManager.cs (Literal Refactor - Original Logic)
+using System.Collections;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TooltipManager : MonoBehaviour
+{
+    public static TooltipManager Instance;
+
+    public Tooltip tooltipPrefab;
+    public float fadeDuration = 0.2f;
+    public Vector2 positionOffset = new Vector2(0, -20);
+
+    private Tooltip tooltipInstance;
+    private RectTransform tooltipRectTransform;
+    private CanvasGroup tooltipCanvasGroup;
+    private Coroutine activeCoroutine;
+
+    private void Awake()
+    {
+        if (Instance == null) { Instance = this; }
+        else { Destroy(gameObject); }
+    }
+
+    private void Start()
+    {
+        GameObject tooltipObject = Instantiate(tooltipPrefab.gameObject, transform);
+        tooltipInstance = tooltipObject.GetComponent<Tooltip>();
+        tooltipRectTransform = tooltipObject.GetComponent<RectTransform>();
+        tooltipCanvasGroup = tooltipInstance.GetComponent<CanvasGroup>();
+        tooltipInstance.gameObject.SetActive(false);
+    }
+
+    public void ShowTooltip(string content, string title, Sprite icon, float delay)
+    {
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+        activeCoroutine = StartCoroutine(ShowRoutine(content, title, icon, delay));
+    }
+
+    public void HideTooltip()
+    {
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+        if (tooltipInstance.gameObject.activeInHierarchy)
+        {
+            activeCoroutine = StartCoroutine(FadeOut());
+        }
+    }
+
+    private IEnumerator ShowRoutine(string content, string title, Sprite icon, float delay)
+    {
+        tooltipCanvasGroup.alpha = 0;
+        tooltipInstance.gameObject.SetActive(false);
+        yield return new WaitForSeconds(delay);
+        tooltipInstance.SetText(content, title, icon);
+
+        for (int i = 0; i < 3; i++)
+        {
+            tooltipInstance.gameObject.SetActive(true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(tooltipRectTransform);
+            yield return new WaitForEndOfFrame();
+            tooltipInstance.gameObject.SetActive(false);
+        }
+
+        tooltipInstance.gameObject.SetActive(true);
+        PositionTooltip();
+
+        // This is your original sorting logic, preserved exactly.
+        transform.SetAsLastSibling();
+
+        yield return FadeIn();
+    }
+
+    private void PositionTooltip()
+    {
+        // This is your original positioning logic, preserved exactly.
+        Vector3 mousePos = Input.mousePosition;
+        RectTransform rt = tooltipInstance.GetComponent<RectTransform>();
+        var rtPos = mousePos + (Vector3)positionOffset;
+        rt.position = new Vector3(
+            Mathf.Clamp(rtPos.x, 0, Screen.width - rt.rect.width),
+            Mathf.Clamp(rtPos.y, rt.rect.height, Screen.height), 0);
+    }
+
+    private IEnumerator FadeIn()
+    {
+        float startTime = Time.unscaledTime;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(0, 1, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 1;
+    }
+
+    private IEnumerator FadeOut()
+    {
+        float startTime = Time.unscaledTime;
+        float startAlpha = tooltipCanvasGroup.alpha;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 0;
+        tooltipInstance.gameObject.SetActive(false);
+    }
+}

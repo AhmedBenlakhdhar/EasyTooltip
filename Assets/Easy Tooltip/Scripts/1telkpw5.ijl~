@@ -1,0 +1,134 @@
+// TooltipManager.cs (Definitive Max Width & Resize Logic)
+using System.Collections;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TooltipManager : MonoBehaviour
+{
+    public static TooltipManager Instance;
+
+    public Tooltip tooltipPrefab;
+    public float fadeDuration = 0.2f;
+    public Vector2 positionOffset = new Vector2(0, -20);
+    [Tooltip("Set to 0 for no max width.")]
+    public float maxWidth = 400f;
+
+    private Tooltip tooltipInstance;
+    private RectTransform tooltipRectTransform;
+    private CanvasGroup tooltipCanvasGroup;
+    private Coroutine activeCoroutine;
+    private LayoutElement layoutElement;
+
+    private void Awake()
+    {
+        if (Instance == null) { Instance = this; }
+        else { Destroy(gameObject); }
+    }
+
+    private void Start()
+    {
+        GameObject tooltipObject = Instantiate(tooltipPrefab.gameObject, transform);
+        tooltipInstance = tooltipObject.GetComponent<Tooltip>();
+        tooltipRectTransform = tooltipObject.GetComponent<RectTransform>();
+        tooltipCanvasGroup = tooltipInstance.GetComponent<CanvasGroup>();
+        layoutElement = tooltipInstance.GetComponent<LayoutElement>();
+        tooltipInstance.gameObject.SetActive(false);
+    }
+
+    public void ShowTooltip(string content, string title, Sprite icon, float delay)
+    {
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+        activeCoroutine = StartCoroutine(ShowRoutine(content, title, icon, delay));
+    }
+
+    public void HideTooltip()
+    {
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+        if (tooltipInstance.gameObject.activeInHierarchy)
+        {
+            activeCoroutine = StartCoroutine(FadeOut());
+        }
+    }
+
+    private IEnumerator ShowRoutine(string content, string title, Sprite icon, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        // --- TWO-STAGE RESIZE PROCESS ---
+
+        // == STAGE 1: Calculate Natural Size ==
+        // Ensure the layout element is disabled to get the true unconstrained size.
+        if (layoutElement != null) layoutElement.enabled = false;
+
+        tooltipInstance.SetText(content, title, icon);
+        tooltipCanvasGroup.alpha = 0;
+
+        // Use the triple-cycle method to get the final, natural size.
+        yield return ForceResize();
+
+        // == STAGE 2: Apply Max Width Constraint ==
+        if (maxWidth > 0 && tooltipRectTransform.rect.width > maxWidth)
+        {
+            // If the natural width exceeds the max width, enable the layout element
+            // and set the preferred width.
+            if (layoutElement != null)
+            {
+                layoutElement.enabled = true;
+                layoutElement.preferredWidth = maxWidth;
+            }
+
+            // Because we changed the layout, we must force it to resize again.
+            yield return ForceResize();
+        }
+
+        // Now the size is guaranteed to be correct.
+        PositionTooltip();
+        transform.SetAsLastSibling();
+        yield return FadeIn();
+    }
+
+    private IEnumerator ForceResize()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            tooltipInstance.gameObject.SetActive(true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(tooltipRectTransform);
+            yield return new WaitForEndOfFrame();
+            tooltipInstance.gameObject.SetActive(false);
+        }
+        tooltipInstance.gameObject.SetActive(true);
+    }
+
+    private void PositionTooltip()
+    {
+        Vector3 mousePos = Input.mousePosition;
+        var rtPos = mousePos + (Vector3)positionOffset;
+        rtPos.x = Mathf.Clamp(rtPos.x, 0, Screen.width - tooltipRectTransform.rect.width);
+        rtPos.y = Mathf.Clamp(rtPos.y, tooltipRectTransform.rect.height, Screen.height);
+        tooltipInstance.transform.position = rtPos;
+    }
+
+    private IEnumerator FadeIn()
+    {
+        float startTime = Time.unscaledTime;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(0, 1, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 1;
+    }
+
+    private IEnumerator FadeOut()
+    {
+        float startTime = Time.unscaledTime;
+        float startAlpha = tooltipCanvasGroup.alpha;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 0;
+        tooltipInstance.gameObject.SetActive(false);
+    }
+}

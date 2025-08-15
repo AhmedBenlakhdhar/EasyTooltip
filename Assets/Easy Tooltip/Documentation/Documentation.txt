@@ -1,0 +1,79 @@
+# Easy Tooltip
+
+### User Manual & Documentation
+
+**Version 1.0**
+**Created by Ahmed Benlakhdhar**
+
+---
+
+### Table of Contents
+1.  Introduction
+2.  Quick Start Guide
+3.  Core Components
+4.  Configuration
+5.  FAQ & Support
+
+---
+
+### 1. Introduction
+
+Thank you for choosing Easy Tooltip! This asset is a lightweight and easy-to-use solution for adding professional tooltips to your Unity project.
+
+**Key Features:**
+*   Zero Setup Required
+*   Rich Content (Title, Content, Icon)
+*   Custom Styling (Title & Icon Colors)
+*   Smart Text Wrapping
+*   Smooth Fade Animations
+*   Stays On-Screen Automatically
+
+---
+
+### 2. Quick Start Guide
+
+1.  **Add the `TooltipTrigger` Component:**
+    Select any UI GameObject and add the `TooltipTrigger` component.
+
+2.  **Add Content:**
+    Fill in the fields in the Inspector.
+
+**Done!** The `TooltipManager` is created automatically. See the Demo Scene in `Assets/Easy Tooltip/Demo` for live examples.
+
+---
+
+### 3. Core Components
+
+*   **`TooltipTrigger`:** The main component you add to your UI elements.
+*   **`TooltipManager`:** The "brain" of the system. It is created automatically.
+*   **`Tooltip`:** The visual prefab for the tooltip. You can edit it to change the default fonts, background, etc. It is located in `Assets/Easy Tooltip/Prefabs/`.
+
+---
+
+### 4. Configuration
+
+You can configure global settings (Max Width, Fade Speed, etc.) in two ways:
+
+**1. Global Settings (Recommended):**
+Edit the **`TooltipManager` prefab** directly. This changes the defaults for your whole project.
+Prefab Path: `Assets/Easy Tooltip/Resources/TooltipManager.prefab`
+
+**2. Per-Scene Overrides (Optional):**
+Drag the `TooltipManager` prefab into a scene's hierarchy to use different settings for that scene only.
+
+---
+
+### 5. FAQ & Support
+
+**Q: My tooltip is appearing behind my other UI! How do I fix it?**
+A: This happens because of Unity's UI rendering order. The system automatically tries to place the tooltip on top, but here are the definitive solutions for complex cases:
+
+*   **Multiple Canvases:** If you use more than one Canvas, ensure the Canvas containing the tooltip has a higher "Sort Order" in its Inspector.
+
+*   **Dynamically Created UI:** If you create new UI elements at runtime *after* the tooltip has appeared, they may draw on top of it.
+
+*   **The Best Practice:** To guarantee the tooltip is *always* on top, the recommended professional solution is to place it on its own dedicated Canvas. Create a new Canvas, set its "Sort Order" to a high number (e.g., 999), and place the `TooltipManager` inside it. This will solve all layering issues.
+
+**Contact for support or feature requests:**
+*   LinkedIn: https://www.linkedin.com/in/ahmedbenlakhdhar/
+*   ArtStation: https://www.artstation.com/ahmedbenlakhdhar

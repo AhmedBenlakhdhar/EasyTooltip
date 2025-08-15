@@ -1,0 +1,70 @@
+// Tooltip.cs (Final Corrected Version)
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+
+[RequireComponent(typeof(CanvasGroup), typeof(LayoutElement))]
+public class Tooltip : MonoBehaviour
+{
+    [Header("UI References")]
+    public GameObject header;
+    public TextMeshProUGUI titleField;
+    public TextMeshProUGUI contentField;
+    public Image iconField;
+
+    private LayoutElement titleLayoutElement;
+    private LayoutElement contentLayoutElement;
+
+    private void Awake()
+    {
+        if (titleField != null) titleLayoutElement = titleField.GetComponent<LayoutElement>();
+        if (contentField != null) contentLayoutElement = contentField.GetComponent<LayoutElement>();
+    }
+
+    /// <summary>
+    /// Populates the UI elements and configures their layout properties.
+    /// </summary>
+    public void Configure(string content, string title, Sprite icon, Color titleColor, Color iconColor, float titleWidth, float contentWidth)
+    {
+        SetPreferredWidth(titleLayoutElement, titleWidth);
+        SetPreferredWidth(contentLayoutElement, contentWidth);
+
+        bool hasTitle = !string.IsNullOrEmpty(title);
+        if (titleField != null)
+        {
+            titleField.gameObject.SetActive(hasTitle);
+            if (hasTitle)
+            {
+                titleField.text = title;
+                titleField.color = titleColor;
+            }
+        }
+
+        if (contentField != null)
+        {
+            contentField.text = content;
+        }
+
+        bool hasIcon = (icon != null);
+        if (iconField != null)
+        {
+            iconField.gameObject.SetActive(hasIcon);
+            if (hasIcon)
+            {
+                iconField.sprite = icon;
+                iconField.color = iconColor;
+            }
+        }
+
+        if (header != null)
+        {
+            header.SetActive(hasTitle || hasIcon);
+        }
+    }
+
+    private void SetPreferredWidth(LayoutElement element, float width)
+    {
+        if (element == null) return;
+        element.preferredWidth = (width > 0) ? width : -1;
+    }
+}

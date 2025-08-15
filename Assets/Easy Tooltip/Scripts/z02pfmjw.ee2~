@@ -1,0 +1,124 @@
+// Tooltip.cs (Asset Store Ready with Final Wrapping Logic)
+using System.Text;
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+
+[RequireComponent(typeof(CanvasGroup))]
+public class Tooltip : MonoBehaviour
+{
+    [Header("UI References")]
+    public GameObject header;
+    public TextMeshProUGUI titleField;
+    public TextMeshProUGUI contentField;
+    public Image iconField;
+
+    /// <summary>
+    /// Populates the UI elements. The formatting logic is now handled in this method.
+    /// </summary>
+    public void SetText(string content, string title, Sprite icon, Color titleColor, Color iconColor, int titleWrapLimit, int contentWrapLimit)
+    {
+        // Format the text with smart line breaks before assigning it.
+        string formattedTitle = FormatTextWithLineBreaks(title, titleWrapLimit);
+        string formattedContent = FormatTextWithLineBreaks(content, contentWrapLimit);
+
+        // Set Title and its Color
+        bool hasTitle = !string.IsNullOrEmpty(title);
+        if (titleField != null)
+        {
+            titleField.gameObject.SetActive(hasTitle);
+            if (hasTitle)
+            {
+                titleField.text = formattedTitle;
+                titleField.color = titleColor;
+            }
+        }
+
+        // Set Content
+        if (contentField != null)
+        {
+            contentField.text = formattedContent;
+        }
+
+        // Set Icon and its Color
+        bool hasIcon = (icon != null);
+        if (iconField != null)
+        {
+            iconField.gameObject.SetActive(hasIcon);
+            if (hasIcon)
+            {
+                iconField.sprite = icon;
+                iconField.color = iconColor;
+            }
+        }
+
+        // Conditionally hide the entire header area
+        if (header != null)
+        {
+            header.SetActive(hasTitle || hasIcon);
+        }
+    }
+
+    /// <summary>
+    /// This is the new, smarter wrapping logic.
+    /// It first splits the text by manually entered newlines, then wraps each of those lines individually.
+    /// </summary>
+    private string FormatTextWithLineBreaks(string text, int maxLineLength)
+    {
+        if (string.IsNullOrEmpty(text) || maxLineLength <= 0)
+        {
+            return text;
+        }
+
+        // Split the text by user-entered newlines.
+        string[] manualLines = text.Split('\n');
+        StringBuilder resultBuilder = new StringBuilder();
+
+        for (int i = 0; i < manualLines.Length; i++)
+        {
+            string line = manualLines[i];
+            resultBuilder.Append(WrapSingleLine(line, maxLineLength));
+
+            // Add the newline back, except for the very last line.
+            if (i < manualLines.Length - 1)
+            {
+                resultBuilder.Append('\n');
+            }
+        }
+
+        return resultBuilder.ToString();
+    }
+
+    /// <summary>
+    /// Helper function to apply wrapping logic to a single line of text.
+    /// </summary>
+    private string WrapSingleLine(string line, int maxLineLength)
+    {
+        if (line.Length <= maxLineLength)
+        {
+            return line;
+        }
+
+        StringBuilder lineBuilder = new StringBuilder();
+        int currentPosition = 0;
+        while (currentPosition < line.Length)
+        {
+            if (line.Length - currentPosition <= maxLineLength)
+            {
+                lineBuilder.Append(line.Substring(currentPosition));
+                break;
+            }
+
+            int breakPosition = line.LastIndexOf(' ', currentPosition + maxLineLength, maxLineLength);
+            if (breakPosition <= currentPosition)
+            {
+                breakPosition = currentPosition + maxLineLength;
+            }
+
+            lineBuilder.Append(line.Substring(currentPosition, breakPosition - currentPosition));
+            lineBuilder.Append('\n');
+            currentPosition = breakPosition + 1;
+        }
+        return lineBuilder.ToString();
+    }
+}

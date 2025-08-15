@@ -1,0 +1,49 @@
+// Tooltip.cs (Updated with Max Width)
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+[RequireComponent(typeof(CanvasGroup))]
+public class Tooltip : MonoBehaviour
+{
+    public GameObject header;
+    public TextMeshProUGUI titleField;
+    public TextMeshProUGUI contentField;
+    public Image iconField;
+
+    // You need to add a Layout Element component to your tooltip's root object
+    // and assign it here in the Inspector.
+    public LayoutElement layoutElement;
+
+    public void SetText(string content, string title, Sprite icon, float maxWidth)
+    {
+        // --- Set Title, Content, and Icon ---
+        if (string.IsNullOrEmpty(title)) { titleField.gameObject.SetActive(false); }
+        else { titleField.gameObject.SetActive(true); titleField.text = title; }
+
+        contentField.text = content;
+
+        if (icon == null) { iconField.gameObject.SetActive(false); }
+        else { iconField.gameObject.SetActive(true); iconField.sprite = icon; }
+
+        // --- Handle Header Visibility ---
+        if (header != null)
+        {
+            if (string.IsNullOrEmpty(title) && icon == null) { header.SetActive(false); }
+            else { header.SetActive(true); }
+        }
+
+        // --- THIS IS THE NEW LOGIC FOR MAX WIDTH ---
+        if (layoutElement != null)
+        {
+            // If maxWidth is set to a value greater than 0, enable the LayoutElement
+            // and set its preferredWidth. This will force the text to wrap.
+            // If maxWidth is 0, disable it to let the text define the width.
+            layoutElement.enabled = maxWidth > 0;
+            if (layoutElement.enabled)
+            {
+                layoutElement.preferredWidth = maxWidth;
+            }
+        }
+    }
+}

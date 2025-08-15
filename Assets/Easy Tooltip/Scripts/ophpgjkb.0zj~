@@ -1,0 +1,156 @@
+// TooltipManager.cs (Asset Store Ready)
+using System.Collections;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TooltipManager : MonoBehaviour
+{
+    #region Static Instance
+    public static TooltipManager Instance;
+    #endregion
+
+    #region Fields
+    [Header("Core Configuration")]
+    public Tooltip tooltipPrefab;
+
+    [Header("Animation Settings")]
+    public float fadeDuration = 0.2f;
+
+    [Header("Layout Settings")]
+    [Tooltip("The maximum width the tooltip can have before text starts wrapping.")]
+    public float maxTooltipWidth = 350f;
+
+    [Header("Positioning")]
+    public Vector2 positionOffset = new Vector2(0, -20);
+
+    // --- Private State ---
+    private Tooltip tooltipInstance;
+    private RectTransform tooltipRectTransform;
+    private CanvasGroup tooltipCanvasGroup;
+    private Coroutine activeCoroutine;
+    #endregion
+
+    #region Unity Lifecycle
+    private void Awake()
+    {
+        if (Instance == null) { Instance = this; }
+        else { Destroy(gameObject); }
+    }
+
+    private void Start()
+    {
+        Canvas rootCanvas = FindFirstObjectByType<Canvas>();
+        if (rootCanvas == null)
+        {
+            Debug.LogError("Tooltip Manager Error: No Canvas found in the scene.");
+            return;
+        }
+
+        GameObject tooltipObject = Instantiate(tooltipPrefab.gameObject, rootCanvas.transform, false);
+        tooltipInstance = tooltipObject.GetComponent<Tooltip>();
+        tooltipRectTransform = tooltipObject.GetComponent<RectTransform>();
+        tooltipCanvasGroup = tooltipInstance.GetComponent<CanvasGroup>();
+
+        tooltipInstance.gameObject.SetActive(false);
+    }
+    #endregion
+
+    #region Public API
+    public void ShowTooltip(string content, string title, Sprite icon, Color titleColor, Color iconColor, float delay)
+    {
+        if (tooltipInstance == null) return;
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+        activeCoroutine = StartCoroutine(ShowRoutine(content, title, icon, titleColor, iconColor, delay));
+    }
+
+    public void HideTooltip()
+    {
+        if (tooltipInstance == null) return;
+        if (activeCoroutine != null) { StopCoroutine(activeCoroutine); }
+        if (tooltipInstance.gameObject.activeInHierarchy)
+        {
+            activeCoroutine = StartCoroutine(FadeOut());
+        }
+    }
+    #endregion
+
+    #region Coroutines
+    private IEnumerator ShowRoutine(string content, string title, Sprite icon, Color titleColor, Color iconColor, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        yield return ResizeTooltipRoutine(content, title, icon, titleColor, iconColor);
+
+        tooltipInstance.gameObject.SetActive(true);
+        tooltipInstance.transform.SetAsLastSibling();
+        PositionTooltip();
+
+        activeCoroutine = StartCoroutine(FadeIn());
+    }
+
+    private IEnumerator ResizeTooltipRoutine(string content, string title, Sprite icon, Color titleColor, Color iconColor)
+    {
+        tooltipCanvasGroup.alpha = 0;
+        tooltipInstance.gameObject.SetActive(false);
+
+        // --- THIS IS THE NEW LOGIC ---
+        // Before setting the text, apply the max width constraint.
+        // This forces the text to wrap when the layout is calculated.
+        if (tooltipInstance.titleRectTransform != null)
+        {
+            tooltipInstance.titleRectTransform.sizeDelta = new Vector2(maxTooltipWidth, tooltipInstance.titleRectTransform.sizeDelta.y);
+        }
+        if (tooltipInstance.contentRectTransform != null)
+        {
+            tooltipInstance.contentRectTransform.sizeDelta = new Vector2(maxTooltipWidth, tooltipInstance.contentRectTransform.sizeDelta.y);
+        }
+
+        tooltipInstance.SetText(content, title, icon, titleColor, iconColor);
+
+        // The "triple cycle" now works on a pre-constrained layout, ensuring a correct height calculation.
+        for (int i = 0; i < 3; i++)
+        {
+            tooltipInstance.gameObject.SetActive(true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(tooltipRectTransform);
+            yield return new WaitForEndOfFrame();
+            tooltipInstance.gameObject.SetActive(false);
+        }
+    }
+
+    private IEnumerator FadeIn()
+    {
+        float startTime = Time.unscaledTime;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(0, 1, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 1;
+    }
+
+    private IEnumerator FadeOut()
+    {
+        float startTime = Time.unscaledTime;
+        float startAlpha = tooltipCanvasGroup.alpha;
+        while (Time.unscaledTime < startTime + fadeDuration)
+        {
+            tooltipCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0, (Time.unscaledTime - startTime) / fadeDuration);
+            yield return null;
+        }
+        tooltipCanvasGroup.alpha = 0;
+        tooltipInstance.gameObject.SetActive(false);
+    }
+    #endregion
+
+    #region Helper Methods
+    private void PositionTooltip()
+    {
+        Vector3 mousePosition = Input.mousePosition;
+        Vector3 tooltipPosition = mousePosition + (Vector3)positionOffset;
+
+        float clampedX = Mathf.Clamp(tooltipPosition.x, 0, Screen.width - tooltipRectTransform.rect.width);
+        float clampedY = Mathf.Clamp(tooltipPosition.y, tooltipRectTransform.rect.height, Screen.height);
+
+        tooltipRectTransform.position = new Vector3(clampedX, clampedY, 0);
+    }
+    #endregion
+}```

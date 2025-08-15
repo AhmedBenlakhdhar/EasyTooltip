@@ -1,0 +1,36 @@
+// TooltipTrigger.cs (Final Corrected Version)
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    [Header("Tooltip Content")]
+    public string title;
+    [TextArea(3, 10)]
+    public string content;
+    public Sprite icon;
+
+    [Header("Custom Styles")]
+    public Color titleColor = Color.white;
+    public Color iconColor = Color.white;
+
+    [Header("Layout Settings")]
+    [Tooltip("The maximum width for the title text before it wraps. Set to 0 or less for no limit.")]
+    public float titleMaxWidth = 0f; // Default to no limit for titles
+    [Tooltip("The maximum width for the content text before it wraps. Set to 0 or less for no limit.")]
+    public float contentMaxWidth = 350f; // Default to a reasonable content width
+
+    [Header("Behavior Settings")]
+    public float hoverDelay = 0.5f;
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        // This now passes the correct parameters that the manager expects.
+        TooltipManager.Instance.ShowTooltip(content, title, icon, titleColor, iconColor, titleMaxWidth, contentMaxWidth, hoverDelay);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        TooltipManager.Instance.HideTooltip();
+    }
+}
