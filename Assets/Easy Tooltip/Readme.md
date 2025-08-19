@@ -1,13 +1,9 @@
-============================================================
-           Easy Tooltip v1.1 by Ahmed Benlakhdhar
-============================================================
+# Easy Tooltip v1.1 by Ahmed Benlakhdhar
 
 A simple, zero-setup tooltip system for Unity UI, configurable from the Inspector or entirely from code.
 
 
----------------------------------
-Quick Start
----------------------------------
+## Quick Start
 
 The system is designed to "just work." You can add tooltips in two ways:
 
@@ -23,9 +19,7 @@ Done. The manager is created automatically.
 (See the Demo Scene and Documentation for more examples).
 
 
----------------------------------
-Key Features
----------------------------------
+## Key Features
 
 • Zero Setup Required (Manager is auto-created)
 • Inspector & C# API for Full Control
@@ -36,17 +30,13 @@ Key Features
 • Smooth Fade Animations
 
 
----------------------------------
-Configuration
----------------------------------
+## Configuration
 
 To configure global settings (Max Width, Fade Speed, etc.), edit the "TooltipManager" prefab located at:
 `Assets/Easy Tooltip/Resources/TooltipManager.prefab`
 
 
----------------------------------
-Support
----------------------------------
+## Support
 
 For the full manual, see the Documentation folder. For support:
 - LinkedIn: https://www.linkedin.com/in/ahmedbenlakhdhar
