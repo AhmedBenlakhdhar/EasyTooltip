@@ -27,7 +27,7 @@ Done. The manager is created automatically.
 • Custom Styles (Title & Icon Colors)  
 • Smart Text Wrapping with Max Width  
 • Outline Aware Positioning (Stays on-screen)  
-• Smooth Fade Animations
+• Smooth Fade Animations  
 
 
 ## Configuration
