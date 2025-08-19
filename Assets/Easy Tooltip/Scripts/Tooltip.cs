@@ -1,34 +1,33 @@
-namespace PixelAdder.SimpleTooltip
+namespace PixeLadder.SimpleTooltip
 {
     using UnityEngine;
     using UnityEngine.UI;
     using TMPro;
 
     /// <summary>
-    /// A simple "view" component that displays tooltip data.
-    /// Only responsible for rendering — no logic for when/where it appears.
+    /// A simple "view" component that displays tooltip data. It is controlled by the TooltipManager.
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
     public class Tooltip : MonoBehaviour
     {
         [Header("UI References")]
+        [Tooltip("The parent object for the title and icon. Can be hidden if both are absent.")]
         [SerializeField] private GameObject header;
-        [SerializeField] public TextMeshProUGUI titleField; // Made public for the manager
-        [SerializeField] public TextMeshProUGUI contentField; // Made public for the manager
+        [Tooltip("The TextMeshPro component for the title text.")]
+        [SerializeField] public TextMeshProUGUI titleField;
+        [Tooltip("The TextMeshPro component for the main content text.")]
+        [SerializeField] public TextMeshProUGUI contentField;
+        [Tooltip("The Image component for the icon.")]
         [SerializeField] private Image iconField;
 
         /// <summary>
-        /// Sets the tooltip UI elements.
+        /// Populates the UI elements with the provided content and styles. This method is null-safe.
         /// </summary>
-        public void SetText(
-            string content,
-            string title = "",
-            Sprite icon = null,
-            Color? titleColor = null,
-            Color? iconColor = null)
+        public void SetText(string content, string title = "", Sprite icon = null, Color? titleColor = null, Color? iconColor = null)
         {
+            // Set Title (null-safe)
             bool hasTitle = !string.IsNullOrEmpty(title);
-            if (titleField)
+            if (titleField != null)
             {
                 titleField.gameObject.SetActive(hasTitle);
                 if (hasTitle)
@@ -38,13 +37,15 @@ namespace PixelAdder.SimpleTooltip
                 }
             }
 
-            if (contentField)
+            // Set Content (null-safe)
+            if (contentField != null)
             {
                 contentField.text = content ?? string.Empty;
             }
 
-            bool hasIcon = icon != null;
-            if (iconField)
+            // Set Icon (null-safe)
+            bool hasIcon = (icon != null);
+            if (iconField != null)
             {
                 iconField.gameObject.SetActive(hasIcon);
                 if (hasIcon)
@@ -54,7 +55,8 @@ namespace PixelAdder.SimpleTooltip
                 }
             }
 
-            if (header)
+            // Conditionally hide the entire header area
+            if (header != null)
             {
                 header.SetActive(hasTitle || hasIcon);
             }

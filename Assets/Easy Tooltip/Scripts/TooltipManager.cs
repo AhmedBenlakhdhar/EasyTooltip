@@ -1,4 +1,4 @@
-namespace PixelAdder.SimpleTooltip
+namespace PixeLadder.SimpleTooltip
 {
     using System.Collections;
     using System.Text;
@@ -7,29 +7,40 @@ namespace PixelAdder.SimpleTooltip
     using TMPro;
 
     /// <summary>
-    /// Singleton that controls a single tooltip instance's lifecycle.
+    /// A singleton manager that controls the lifecycle of a single tooltip instance.
+    /// It handles showing, hiding, positioning, and resizing logic.
     /// </summary>
     public class TooltipManager : MonoBehaviour
     {
+        #region Static Instance
         public static TooltipManager Instance { get; private set; }
+        #endregion
 
+        #region Fields
         [Header("Core Configuration")]
+        [Tooltip("The UI Prefab for the tooltip itself.")]
         [SerializeField] private Tooltip tooltipPrefab;
 
         [Header("Layout Settings")]
+        [Tooltip("The maximum width the tooltip can have before its text starts wrapping.")]
         [SerializeField, Min(50f)] private float maxTooltipWidth = 350f;
 
         [Header("Animation Settings")]
+        [Tooltip("The duration of the fade-in and fade-out animations in seconds.")]
         [SerializeField, Min(0f)] private float fadeDuration = 0.2f;
 
         [Header("Positioning")]
+        [Tooltip("An offset to apply to the tooltip's position relative to the mouse cursor.")]
         [SerializeField] private Vector2 positionOffset = new(0, -20);
 
+        // --- Private State ---
         private Tooltip tooltipInstance;
         private RectTransform tooltipRect;
         private CanvasGroup canvasGroup;
         private Coroutine activeCoroutine;
+        #endregion
 
+        #region Unity Lifecycle
         private void Awake()
         {
             if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
@@ -38,13 +49,15 @@ namespace PixelAdder.SimpleTooltip
 
         private void Start()
         {
+            // Failsafe to ensure a Canvas exists.
             Canvas rootCanvas = FindFirstObjectByType<Canvas>();
             if (!rootCanvas)
             {
-                Debug.LogError("TooltipManager: No Canvas found in scene.");
+                Debug.LogError("TooltipManager Error: No Canvas found in scene. Please add a Canvas.");
                 return;
             }
 
+            // Instantiate and cache components for efficiency.
             GameObject tooltipObj = Instantiate(tooltipPrefab.gameObject, rootCanvas.transform, false);
             tooltipInstance = tooltipObj.GetComponent<Tooltip>();
             tooltipRect = tooltipObj.GetComponent<RectTransform>();
@@ -52,11 +65,14 @@ namespace PixelAdder.SimpleTooltip
 
             tooltipObj.SetActive(false);
         }
+        #endregion
 
+        #region Public API
         public void ShowTooltip(string content, string title, Sprite icon, Color titleColor, Color iconColor, float delay)
         {
             if (!tooltipInstance) return;
-            canvasGroup.alpha = 0;
+
+            // "Last Command Wins": Stop any previous coroutine.
             if (activeCoroutine != null) StopCoroutine(activeCoroutine);
             activeCoroutine = StartCoroutine(ShowRoutine(content, title, icon, titleColor, iconColor, delay));
         }
@@ -64,19 +80,26 @@ namespace PixelAdder.SimpleTooltip
         public void HideTooltip()
         {
             if (!tooltipInstance) return;
+
             if (activeCoroutine != null) StopCoroutine(activeCoroutine);
             if (tooltipInstance.gameObject.activeInHierarchy)
                 activeCoroutine = StartCoroutine(FadeOut());
         }
+        #endregion
 
+        #region Coroutines & Logic
         private IEnumerator ShowRoutine(string content, string title, Sprite icon, Color titleColor, Color iconColor, float delay)
         {
+            // Set alpha to 0 before waiting to prevent a one-frame flicker of old content.
+            canvasGroup.alpha = 0;
             yield return new WaitForSeconds(delay);
+
             yield return ResizeTooltipRoutine(content, title, icon, titleColor, iconColor);
 
             tooltipInstance.gameObject.SetActive(true);
             tooltipInstance.transform.SetAsLastSibling();
             PositionTooltip();
+
             activeCoroutine = StartCoroutine(FadeIn());
         }
 
@@ -84,8 +107,6 @@ namespace PixelAdder.SimpleTooltip
         {
             tooltipInstance.gameObject.SetActive(false);
 
-            // --- LOGIC FIX 1: Using direct references instead of GetComponentInChildren ---
-            // This ensures we are wrapping the correct text component every time.
             float availableTitleWidth = CalculateAvailableWidthForText(tooltipInstance.titleField);
             float availableContentWidth = CalculateAvailableWidthForText(tooltipInstance.contentField);
 
@@ -94,8 +115,7 @@ namespace PixelAdder.SimpleTooltip
 
             tooltipInstance.SetText(wrappedContent, wrappedTitle, icon, titleColor, iconColor);
 
-            // --- LOGIC FIX 2: Restored the robust "triple cycle" resize method ---
-            // This is critical for handling complex, nested layouts reliably.
+            // The robust "triple cycle" resize method.
             for (int i = 0; i < 3; i++)
             {
                 tooltipInstance.gameObject.SetActive(true);
@@ -110,10 +130,11 @@ namespace PixelAdder.SimpleTooltip
             float start = Time.unscaledTime;
             while (Time.unscaledTime < start + fadeDuration)
             {
+                if (canvasGroup == null) yield break;
                 canvasGroup.alpha = Mathf.Lerp(0, 1, (Time.unscaledTime - start) / fadeDuration);
                 yield return null;
             }
-            canvasGroup.alpha = 1;
+            if (canvasGroup != null) canvasGroup.alpha = 1;
         }
 
         private IEnumerator FadeOut()
@@ -122,18 +143,34 @@ namespace PixelAdder.SimpleTooltip
             float startAlpha = canvasGroup.alpha;
             while (Time.unscaledTime < start + fadeDuration)
             {
+                if (canvasGroup == null) yield break;
                 canvasGroup.alpha = Mathf.Lerp(startAlpha, 0, (Time.unscaledTime - start) / fadeDuration);
                 yield return null;
             }
-            canvasGroup.alpha = 0;
-            tooltipInstance.gameObject.SetActive(false);
+            if (canvasGroup != null) canvasGroup.alpha = 0;
+            if (tooltipInstance != null) tooltipInstance.gameObject.SetActive(false);
         }
+        #endregion
 
+        #region Helper Methods
         private void PositionTooltip()
         {
+            float outlineSize = 0;
+            Outline outline = tooltipInstance.GetComponentInChildren<Outline>();
+            if (outline != null)
+            {
+                outlineSize = outline.effectDistance.x;
+            }
+
             Vector3 mousePos = Input.mousePosition + (Vector3)positionOffset;
-            float x = Mathf.Clamp(mousePos.x, 0, Screen.width - tooltipRect.rect.width);
-            float y = Mathf.Clamp(mousePos.y, tooltipRect.rect.height, Screen.height);
+            float scale = tooltipRect.lossyScale.x;
+
+            float totalWidth = (tooltipRect.rect.width + outlineSize) * scale;
+            float totalHeight = (tooltipRect.rect.height + outlineSize) * scale;
+
+            float x = Mathf.Clamp(mousePos.x, 0, Screen.width - totalWidth);
+            float y = Mathf.Clamp(mousePos.y, totalHeight, Screen.height);
+
             tooltipRect.position = new Vector3(x, y, 0);
         }
 
@@ -141,6 +178,7 @@ namespace PixelAdder.SimpleTooltip
         {
             float availableWidth = maxTooltipWidth;
             if (textElement == null) return availableWidth;
+
             Transform current = textElement.transform;
             while (current != null && current != tooltipInstance.transform)
             {
@@ -162,22 +200,27 @@ namespace PixelAdder.SimpleTooltip
             if (string.IsNullOrEmpty(text) || tmp == null) return text;
             if (tmp.GetPreferredValues(text).x <= maxWidth) return text;
 
-            StringBuilder sb = new();
+            StringBuilder sb = new StringBuilder();
             string[] words = text.Split(' ');
             string line = "";
 
-            foreach (var word in words)
+            for (int i = 0; i < words.Length; i++)
             {
+                string word = words[i];
                 string testLine = string.IsNullOrEmpty(line) ? word : $"{line} {word}";
                 if (tmp.GetPreferredValues(testLine).x > maxWidth && !string.IsNullOrEmpty(line))
                 {
                     sb.AppendLine(line);
                     line = word;
                 }
-                else line = testLine;
+                else
+                {
+                    line = testLine;
+                }
             }
             sb.Append(line);
             return sb.ToString();
         }
+        #endregion
     }
 }
