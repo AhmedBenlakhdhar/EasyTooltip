@@ -12,7 +12,7 @@ The system is designed to "just work." You can add tooltips in two ways:
     - Fill in the Title and Content fields.
 
 2.  **From Code:**
-    - Call the static method from any script:
+    - Call the static method from any script:  
       `TooltipTrigger.AddTooltip(myGameObject, "My content");`
 
 Done. The manager is created automatically.
@@ -21,12 +21,12 @@ Done. The manager is created automatically.
 
 ## Key Features
 
-• Zero Setup Required (Manager is auto-created)
-• Inspector & C# API for Full Control
-• Rich Content (Title, Content, Icon)
-• Custom Styles (Title & Icon Colors)
-• Smart Text Wrapping with Max Width
-• Outline Aware Positioning (Stays on-screen)
+• Zero Setup Required (Manager is auto-created)  
+• Inspector & C# API for Full Control  
+• Rich Content (Title, Content, Icon)  
+• Custom Styles (Title & Icon Colors)  
+• Smart Text Wrapping with Max Width  
+• Outline Aware Positioning (Stays on-screen)  
 • Smooth Fade Animations
 
 
