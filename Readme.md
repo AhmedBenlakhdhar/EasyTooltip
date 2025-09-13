@@ -7,7 +7,7 @@ A simple, zero-setup tooltip system for Unity UI, configurable from the Inspecto
 
 The system is designed to "just work." You can add tooltips in two ways:
 
-1.  **From the Inspector (Recommended):**
+1.  **From the Inspector (Recommended):*
     - Add the "TooltipTrigger" component to any UI element.
     - Fill in the Title and Content fields.
 
@@ -21,13 +21,13 @@ Done. The manager is created automatically.
 
 ## Key Features
 
-• Zero Setup Required (Manager is auto-created)  
-• Inspector & C# API for Full Control  
-• Rich Content (Title, Content, Icon)  
-• Custom Styles (Title & Icon Colors)  
-• Smart Text Wrapping with Max Width  
-• Outline Aware Positioning (Stays on-screen)  
-• Smooth Fade Animations  
+- Zero Setup Required (Manager is auto-created)
+- Inspector & C# API for Full Control
+- Rich Content (Title, Content, Icon)
+- Custom Styles (Title & Icon Colors)
+- Smart Text Wrapping with Max Width
+- Outline Aware Positioning (Stays on-screen)
+- Smooth Fade Animations
 
 
 ## Configuration
