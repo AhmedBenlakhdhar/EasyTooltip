@@ -1,9 +1,9 @@
 fileFormatVersion: 2
-guid: f8a49ced63d0dce4188eba50287e6725
+guid: ee89e2d722dd39a43ae5777545173c92
 AssetOrigin:
   serializedVersion: 1
   productId: 329113
   packageName: Easy Tooltip
   packageVersion: 2.0
-  assetPath: Assets/Easy Tooltip/Scripts/Tooltip.cs
+  assetPath: Assets/Easy Tooltip/Demo/EasyTooltipDemo.cs
   uploadId: 846488

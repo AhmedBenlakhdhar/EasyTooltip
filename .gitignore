@@ -68,3 +68,4 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 *.rar
 Assets/TheraBytes/BetterUI/BetterUI_TextMeshPro.unitypackage.meta
+WebGL_Build/

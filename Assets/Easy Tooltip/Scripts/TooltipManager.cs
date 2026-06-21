@@ -1,15 +1,15 @@
-namespace PixeLadder.SimpleTooltip
+namespace PixeLadder.EasyTooltip
 {
     using System.Collections;
     using System.Text;
     using UnityEngine;
     using UnityEngine.UI;
     using TMPro;
+#if ENABLE_INPUT_SYSTEM
+    using UnityEngine.InputSystem;
+#endif
 
-    /// <summary>
-    /// A singleton manager that controls the lifecycle of a single tooltip instance.
-    /// It handles showing, hiding, positioning, and resizing logic.
-    /// </summary>
+    [AddComponentMenu("PixeLadder/Easy Tooltip/Tooltip Manager")]
     public class TooltipManager : MonoBehaviour
     {
         #region Static Instance
@@ -18,26 +18,46 @@ namespace PixeLadder.SimpleTooltip
 
         #region Fields
         [Header("Core Configuration")]
-        [Tooltip("The UI Prefab for the tooltip itself.")]
         [SerializeField] private Tooltip tooltipPrefab;
 
-        [Header("Layout Settings")]
-        [Tooltip("The maximum width the tooltip can have before its text starts wrapping.")]
-        [SerializeField, Min(50f)] private float maxTooltipWidth = 350f;
+        [Header("Global Size")]
+        [SerializeField, Min(50f)] private float defaultMaxWidth = 350f;
 
-        [Header("Animation Settings")]
-        [Tooltip("The duration of the fade-in and fade-out animations in seconds.")]
+        [Header("Global Animation")]
         [SerializeField, Min(0f)] private float fadeDuration = 0.2f;
 
-        [Header("Positioning")]
-        [Tooltip("An offset to apply to the tooltip's position relative to the mouse cursor.")]
-        [SerializeField] private Vector2 positionOffset = new(0, -20);
+        [Header("Global Positioning")]
+        public Vector2 defaultMouseOffset = new(0, -20);
+        public float defaultFixedGap = 5f;
+        [SerializeField] private bool smartFlipping = true;
+
+        [Header("Global Style Defaults")]
+        public Color defaultTitleColor = Color.white;
+        public Color defaultIconColor = Color.white;
+        public float defaultHoverDelay = 0.5f;
+
+        [Space(5)]
+        public Color defaultBackgroundColor = new Color(0.25f, 0.25f, 0.25f, 1f);
+        public bool defaultShowOutline = true;
+        public Color defaultOutlineColor = Color.white;
+
+        // --- Public Accessors ---
+        public float DefaultMaxWidth => defaultMaxWidth;
 
         // --- Private State ---
         private Tooltip tooltipInstance;
         private RectTransform tooltipRect;
         private CanvasGroup canvasGroup;
-        private Coroutine activeCoroutine;
+
+        private Coroutine activeShowCoroutine;
+        private Coroutine activeHideCoroutine;
+
+        // Current Request Context
+        private TooltipTrigger currentTrigger; // Changed from Transform to TooltipTrigger
+        private TooltipPositionMode currentMode;
+        private TooltipAnchor currentAnchor;
+        private Vector2 currentOffset;
+        private float? currentWidth;
         #endregion
 
         #region Unity Lifecycle
@@ -46,76 +66,91 @@ namespace PixeLadder.SimpleTooltip
             if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
             else { Destroy(gameObject); }
         }
-
-        private void Start()
-        {
-            // Failsafe to ensure a Canvas exists.
-            Canvas rootCanvas = FindFirstObjectByType<Canvas>();
-            if (!rootCanvas)
-            {
-                Debug.LogError("TooltipManager Error: No Canvas found in scene. Please add a Canvas.");
-                return;
-            }
-
-            // Instantiate and cache components for efficiency.
-            GameObject tooltipObj = Instantiate(tooltipPrefab.gameObject, rootCanvas.transform, false);
-            tooltipInstance = tooltipObj.GetComponent<Tooltip>();
-            tooltipRect = tooltipObj.GetComponent<RectTransform>();
-            canvasGroup = tooltipObj.GetComponent<CanvasGroup>();
-
-            tooltipObj.SetActive(false);
-        }
         #endregion
 
         #region Public API
-        public void ShowTooltip(string content, string title, Sprite icon, Color titleColor, Color iconColor, float delay)
+        // Changed triggerContext (Transform) to trigger (TooltipTrigger)
+        public void ShowTooltip(string content, string title, Sprite icon,
+            Color titleColor, Color iconColor, Color bgColor, Color outlineColor, bool showOutline,
+            float delay, TooltipTrigger trigger,
+            TooltipPositionMode mode, TooltipAnchor anchor, Vector2 offset, float? widthOverride)
         {
-            if (!tooltipInstance) return;
+            if (activeShowCoroutine != null) StopCoroutine(activeShowCoroutine);
 
-            // "Last Command Wins": Stop any previous coroutine.
-            if (activeCoroutine != null) StopCoroutine(activeCoroutine);
-            activeCoroutine = StartCoroutine(ShowRoutine(content, title, icon, titleColor, iconColor, delay));
+            currentTrigger = trigger;
+            currentMode = mode;
+            currentAnchor = anchor;
+            currentOffset = offset;
+            currentWidth = widthOverride;
+
+            activeShowCoroutine = StartCoroutine(ShowRoutine(content, title, icon, titleColor, iconColor, bgColor, outlineColor, showOutline, delay));
         }
 
         public void HideTooltip()
         {
-            if (!tooltipInstance) return;
+            if (tooltipInstance == null) return;
 
-            if (activeCoroutine != null) StopCoroutine(activeCoroutine);
-            if (tooltipInstance.gameObject.activeInHierarchy)
-                activeCoroutine = StartCoroutine(FadeOut());
+            // Stop show coroutine so the event doesn't fire if we hid before the delay ended
+            if (activeShowCoroutine != null) StopCoroutine(activeShowCoroutine);
+
+            if (activeHideCoroutine != null) StopCoroutine(activeHideCoroutine);
+
+            // Only hide (and fire event) if it's actually active/showing
+            if (tooltipInstance.gameObject.activeInHierarchy || (canvasGroup != null && canvasGroup.alpha > 0))
+            {
+                // Fire the Hide event
+                if (currentTrigger != null) currentTrigger.onTooltipHide?.Invoke();
+
+                activeHideCoroutine = StartCoroutine(FadeOut());
+            }
         }
         #endregion
 
-        #region Coroutines & Logic
-        private IEnumerator ShowRoutine(string content, string title, Sprite icon, Color titleColor, Color iconColor, float delay)
+        #region Coroutines
+        private IEnumerator ShowRoutine(string content, string title, Sprite icon,
+            Color titleColor, Color iconColor, Color bgColor, Color outlineColor, bool showOutline,
+            float delay)
         {
-            // Set alpha to 0 before waiting to prevent a one-frame flicker of old content.
-            canvasGroup.alpha = 0;
-            yield return new WaitForSeconds(delay);
+            // 1. Wait for the Delay
+            if (delay > 0) yield return new WaitForSeconds(delay);
 
-            yield return ResizeTooltipRoutine(content, title, icon, titleColor, iconColor);
+            if (activeHideCoroutine != null) StopCoroutine(activeHideCoroutine);
+
+            // 2. Ensure resources exist
+            // We use currentTrigger.transform for context
+            if (currentTrigger == null || !EnsureTooltipReady(currentTrigger.transform)) yield break;
+
+            if (canvasGroup != null) canvasGroup.alpha = 0;
+
+            // 3. Prepare Visuals
+            yield return ResizeTooltipRoutine(content, title, icon, titleColor, iconColor, bgColor, outlineColor, showOutline);
 
             tooltipInstance.gameObject.SetActive(true);
             tooltipInstance.transform.SetAsLastSibling();
-            PositionTooltip();
+            UpdatePosition();
 
-            activeCoroutine = StartCoroutine(FadeIn());
+            // 4. Fire the Show Event (Syncs with visibility)
+            currentTrigger.onTooltipShow?.Invoke();
+
+            activeShowCoroutine = StartCoroutine(FadeIn());
         }
 
-        private IEnumerator ResizeTooltipRoutine(string content, string title, Sprite icon, Color titleColor, Color iconColor)
+        private IEnumerator ResizeTooltipRoutine(string content, string title, Sprite icon,
+            Color titleColor, Color iconColor, Color bgColor, Color outlineColor, bool showOutline)
         {
             tooltipInstance.gameObject.SetActive(false);
 
-            float availableTitleWidth = CalculateAvailableWidthForText(tooltipInstance.titleField);
-            float availableContentWidth = CalculateAvailableWidthForText(tooltipInstance.contentField);
+            float targetMax = currentWidth ?? defaultMaxWidth;
+
+            float availableTitleWidth = CalculateAvailableWidthForText(tooltipInstance.titleField, targetMax);
+            float availableContentWidth = CalculateAvailableWidthForText(tooltipInstance.contentField, targetMax);
 
             string wrappedTitle = WrapText(title, tooltipInstance.titleField, availableTitleWidth);
             string wrappedContent = WrapText(content, tooltipInstance.contentField, availableContentWidth);
 
-            tooltipInstance.SetText(wrappedContent, wrappedTitle, icon, titleColor, iconColor);
+            tooltipInstance.SetContent(wrappedContent, wrappedTitle, icon, titleColor, iconColor);
+            tooltipInstance.SetStyle(bgColor, outlineColor, showOutline);
 
-            // The robust "triple cycle" resize method.
             for (int i = 0; i < 3; i++)
             {
                 tooltipInstance.gameObject.SetActive(true);
@@ -152,43 +187,198 @@ namespace PixeLadder.SimpleTooltip
         }
         #endregion
 
-        #region Helper Methods
-        private void PositionTooltip()
+        #region Positioning Logic
+        private void UpdatePosition()
         {
-            float outlineSize = 0;
-            Outline outline = tooltipInstance.GetComponentInChildren<Outline>();
-            if (outline != null)
+            if (tooltipInstance == null) return;
+
+            if (currentMode == TooltipPositionMode.FollowMouse)
             {
-                outlineSize = outline.effectDistance.x;
+                tooltipRect.pivot = new Vector2(0, 1);
+                PositionAtMouse();
+                ClampToScreen();
             }
+            else
+            {
+                tooltipRect.pivot = new Vector2(0.5f, 0.5f);
+                Vector3 preferredPos = CalculateFixedPosition(currentAnchor);
+                tooltipInstance.transform.localPosition = preferredPos;
 
-            Vector3 mousePos = Input.mousePosition + (Vector3)positionOffset;
-            float scale = tooltipRect.lossyScale.x;
+                if (smartFlipping && IsOutOfBounds(tooltipRect))
+                {
+                    TooltipAnchor flippedAnchor = GetOppositeAnchor(currentAnchor);
+                    Vector3 flippedPos = CalculateFixedPosition(flippedAnchor);
 
-            float totalWidth = (tooltipRect.rect.width + outlineSize) * scale;
-            float totalHeight = (tooltipRect.rect.height + outlineSize) * scale;
-
-            float x = Mathf.Clamp(mousePos.x, 0, Screen.width - totalWidth);
-            float y = Mathf.Clamp(mousePos.y, totalHeight, Screen.height);
-
-            tooltipRect.position = new Vector3(x, y, 0);
+                    tooltipInstance.transform.localPosition = flippedPos;
+                    if (IsOutOfBounds(tooltipRect))
+                    {
+                        tooltipInstance.transform.localPosition = preferredPos;
+                    }
+                }
+                ClampToScreen();
+            }
         }
 
-        private float CalculateAvailableWidthForText(TMP_Text textElement)
+        private void PositionAtMouse()
         {
-            float availableWidth = maxTooltipWidth;
-            if (textElement == null) return availableWidth;
+#if ENABLE_INPUT_SYSTEM
+            Vector2 screenPos = Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+#else
+            Vector2 screenPos = Input.mousePosition;
+#endif
+            screenPos += defaultMouseOffset + currentOffset;
+            ScreenToLocal(screenPos, out Vector2 localPoint);
+            tooltipInstance.transform.localPosition = new Vector3(localPoint.x, localPoint.y, 0);
+        }
 
+        private Vector3 CalculateFixedPosition(TooltipAnchor anchor)
+        {
+            if (currentTrigger == null) return Vector3.zero;
+            RectTransform triggerRect = currentTrigger.GetComponent<RectTransform>();
+            if (triggerRect == null) return Vector3.zero;
+
+            Vector3[] corners = new Vector3[4];
+            triggerRect.GetWorldCorners(corners);
+
+            Vector3 worldTarget = Vector3.zero;
+            Vector2 dir = Vector2.zero;
+
+            float tipHeight = tooltipRect.rect.height * tooltipRect.localScale.y;
+            float tipWidth = tooltipRect.rect.width * tooltipRect.localScale.x;
+            float gap = defaultFixedGap;
+
+            switch (anchor)
+            {
+                case TooltipAnchor.TopCenter: worldTarget = (corners[1] + corners[2]) / 2f; dir = new(0, tipHeight / 2 + gap); break;
+                case TooltipAnchor.TopLeft: worldTarget = corners[1]; dir = new(tipWidth / 2, tipHeight / 2 + gap); break;
+                case TooltipAnchor.TopRight: worldTarget = corners[2]; dir = new(-tipWidth / 2, tipHeight / 2 + gap); break;
+                case TooltipAnchor.BottomCenter: worldTarget = (corners[0] + corners[3]) / 2f; dir = new(0, -(tipHeight / 2 + gap)); break;
+                case TooltipAnchor.BottomLeft: worldTarget = corners[0]; dir = new(tipWidth / 2, -(tipHeight / 2 + gap)); break;
+                case TooltipAnchor.BottomRight: worldTarget = corners[3]; dir = new(-tipWidth / 2, -(tipHeight / 2 + gap)); break;
+                case TooltipAnchor.LeftCenter: worldTarget = (corners[0] + corners[1]) / 2f; dir = new(-(tipWidth / 2 + gap), 0); break;
+                case TooltipAnchor.LeftTop: worldTarget = corners[1]; dir = new(-(tipWidth / 2 + gap), -tipHeight / 2); break;
+                case TooltipAnchor.LeftBottom: worldTarget = corners[0]; dir = new(-(tipWidth / 2 + gap), tipHeight / 2); break;
+                case TooltipAnchor.RightCenter: worldTarget = (corners[2] + corners[3]) / 2f; dir = new(tipWidth / 2 + gap, 0); break;
+                case TooltipAnchor.RightTop: worldTarget = corners[2]; dir = new(tipWidth / 2 + gap, -tipHeight / 2); break;
+                case TooltipAnchor.RightBottom: worldTarget = corners[3]; dir = new(tipWidth / 2 + gap, tipHeight / 2); break;
+            }
+
+            Canvas rootCanvas = tooltipInstance.GetComponentInParent<Canvas>();
+            Camera uiCamera = (rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : rootCanvas.worldCamera;
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(uiCamera, worldTarget);
+
+            if (ScreenToLocal(screenPoint, out Vector2 localPoint))
+            {
+                return new Vector3(localPoint.x + dir.x + currentOffset.x, localPoint.y + dir.y + currentOffset.y, 0);
+            }
+            return Vector3.zero;
+        }
+
+        private void ClampToScreen()
+        {
+            RectTransform parentRect = tooltipInstance.transform.parent as RectTransform;
+            Vector3 currentLocalPos = tooltipInstance.transform.localPosition;
+            Rect parentBounds = parentRect.rect;
+            Rect tooltipBounds = tooltipRect.rect;
+            Vector3 scale = tooltipInstance.transform.localScale;
+
+            float scaledWidth = tooltipBounds.width * scale.x;
+            float scaledHeight = tooltipBounds.height * scale.y;
+
+            float pivotX = tooltipRect.pivot.x;
+            float pivotY = tooltipRect.pivot.y;
+
+            float left = currentLocalPos.x - (scaledWidth * pivotX);
+            float right = currentLocalPos.x + (scaledWidth * (1f - pivotX));
+            float bottom = currentLocalPos.y - (scaledHeight * pivotY);
+            float top = currentLocalPos.y + (scaledHeight * (1f - pivotY));
+
+            if (right > parentBounds.xMax) currentLocalPos.x -= (right - parentBounds.xMax);
+            else if (left < parentBounds.xMin) currentLocalPos.x += (parentBounds.xMin - left);
+
+            if (top > parentBounds.yMax) currentLocalPos.y -= (top - parentBounds.yMax);
+            else if (bottom < parentBounds.yMin) currentLocalPos.y += (parentBounds.yMin - bottom);
+
+            tooltipInstance.transform.localPosition = currentLocalPos;
+        }
+
+        private TooltipAnchor GetOppositeAnchor(TooltipAnchor anchor)
+        {
+            return anchor switch
+            {
+                TooltipAnchor.TopCenter => TooltipAnchor.BottomCenter,
+                TooltipAnchor.TopLeft => TooltipAnchor.BottomLeft,
+                TooltipAnchor.TopRight => TooltipAnchor.BottomRight,
+                TooltipAnchor.BottomCenter => TooltipAnchor.TopCenter,
+                TooltipAnchor.BottomLeft => TooltipAnchor.TopLeft,
+                TooltipAnchor.BottomRight => TooltipAnchor.TopRight,
+                TooltipAnchor.LeftCenter => TooltipAnchor.RightCenter,
+                TooltipAnchor.LeftTop => TooltipAnchor.RightTop,
+                TooltipAnchor.LeftBottom => TooltipAnchor.RightBottom,
+                TooltipAnchor.RightCenter => TooltipAnchor.LeftCenter,
+                TooltipAnchor.RightTop => TooltipAnchor.LeftTop,
+                TooltipAnchor.RightBottom => TooltipAnchor.LeftBottom,
+                _ => anchor
+            };
+        }
+
+        private bool IsOutOfBounds(RectTransform rect)
+        {
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            foreach (var corner in corners)
+            {
+                if (corner.x < 0 || corner.x > Screen.width || corner.y < 0 || corner.y > Screen.height) return true;
+            }
+            return false;
+        }
+
+        private bool EnsureTooltipReady(Transform triggerContext)
+        {
+            Canvas targetCanvas = null;
+            if (triggerContext != null)
+            {
+                Canvas foundCanvas = triggerContext.GetComponentInParent<Canvas>();
+                if (foundCanvas != null) targetCanvas = foundCanvas.rootCanvas;
+            }
+            if (targetCanvas == null) targetCanvas = FindFirstObjectByType<Canvas>();
+            if (targetCanvas == null) return false;
+
+            if (tooltipInstance == null)
+            {
+                GameObject tooltipObj = Instantiate(tooltipPrefab.gameObject, targetCanvas.transform, false);
+                tooltipInstance = tooltipObj.GetComponent<Tooltip>();
+                tooltipRect = tooltipObj.GetComponent<RectTransform>();
+                canvasGroup = tooltipObj.GetComponent<CanvasGroup>();
+                tooltipObj.SetActive(false);
+            }
+
+            if (tooltipInstance.transform.parent != targetCanvas.transform)
+            {
+                tooltipInstance.transform.SetParent(targetCanvas.transform);
+                tooltipInstance.transform.localScale = Vector3.one;
+            }
+            return true;
+        }
+
+        private bool ScreenToLocal(Vector2 screenPos, out Vector2 localPoint)
+        {
+            Canvas rootCanvas = tooltipInstance.GetComponentInParent<Canvas>();
+            Camera uiCamera = (rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : rootCanvas.worldCamera;
+            RectTransform parentRect = tooltipInstance.transform.parent as RectTransform;
+            return RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screenPos, uiCamera, out localPoint);
+        }
+
+        private float CalculateAvailableWidthForText(TMP_Text textElement, float maxWidth)
+        {
+            float availableWidth = maxWidth;
+            if (textElement == null) return availableWidth;
             Transform current = textElement.transform;
             while (current != null && current != tooltipInstance.transform)
             {
                 if (current.TryGetComponent<LayoutGroup>(out var layoutGroup))
                 {
                     availableWidth -= (layoutGroup.padding.left + layoutGroup.padding.right);
-                    if (layoutGroup is HorizontalLayoutGroup hlg)
-                    {
-                        availableWidth -= hlg.spacing * (current.parent.childCount - 1);
-                    }
                 }
                 current = current.parent;
             }
@@ -199,11 +389,9 @@ namespace PixeLadder.SimpleTooltip
         {
             if (string.IsNullOrEmpty(text) || tmp == null) return text;
             if (tmp.GetPreferredValues(text).x <= maxWidth) return text;
-
             StringBuilder sb = new StringBuilder();
             string[] words = text.Split(' ');
             string line = "";
-
             for (int i = 0; i < words.Length; i++)
             {
                 string word = words[i];
@@ -213,10 +401,7 @@ namespace PixeLadder.SimpleTooltip
                     sb.AppendLine(line);
                     line = word;
                 }
-                else
-                {
-                    line = testLine;
-                }
+                else line = testLine;
             }
             sb.Append(line);
             return sb.ToString();

@@ -5,3 +5,10 @@ TextScriptImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 329113
+  packageName: Easy Tooltip
+  packageVersion: 2.0
+  assetPath: Assets/Easy Tooltip/Readme.md
+  uploadId: 846488

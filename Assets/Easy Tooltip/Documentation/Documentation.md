@@ -2,7 +2,7 @@
 
 ### User Manual & Documentation
 
-**Version 1.1**
+**Version 2.0.1**
 **Created by Ahmed Benlakhdhar**
 
 ---
@@ -23,11 +23,12 @@ Thank you for choosing Easy Tooltip! This asset is a lightweight and easy-to-use
 **Key Features:**
 *   **Zero Setup Required:** Works out of the box for both Inspector and code-based tooltips.
 *   **Inspector & C# API:** Create and customize tooltips visually or entirely from code.
+*   **Flexible Positioning:** Choose between "Follow Mouse" or "Fixed" modes (e.g., Top-Left, Bottom-Center) with smart screen flipping.
+*   **Visual Styling:** Override background colors, outline colors, and toggles per tooltip.
+*   **Event System:** UnityEvents (OnShow/OnHide) allow you to trigger game logic easily.
 *   **Rich Content:** Supports titles, main content, and icons.
-*   **Fully Stylable:** Set custom colors for the title and icon.
-*   **Smart Text Wrapping:** Automatically wraps long text to respect a 'Max Tooltip Width'.
-*   **Outline Aware Positioning:** Automatically adjusts to keep tooltips on-screen, even when using a UI Outline.
-*   **Smooth Animations:** Fades tooltips in and out for a professional feel.
+*   **Multi-Canvas Support:** Works seamlessly across Screen Space (Overlay/Camera) and World Space UIs.
+*   **Smart Clamping:** Automatically keeps tooltips on-screen, accounting for Scale, Pivot, and UI Outlines.
 
 ---
 
@@ -43,6 +44,9 @@ The system is designed to "just work" in seconds. You can add tooltips in two wa
 2.  **Add Content:**
     Fill in the fields in the Inspector.
 
+3.  **Customize (Optional):**
+    Use the checkboxes (Override Defaults) to change positioning, styling, or timing for this specific trigger.
+
 **Done!** The `TooltipManager` is created automatically.
 
 #### **Method 2: Using Code (Recommended for Programmers)**
@@ -57,10 +61,20 @@ public GameObject myButton;
 // Add a simple tooltip in one line
 TooltipTrigger.AddTooltip(myButton, "This is a procedural tooltip.");
 
-// Or, add a complex tooltip and customize it
+// Or, add a complex tooltip and customize styles/positioning
 var trigger = TooltipTrigger.AddTooltip(myButton, "Stats and info here.", "Magic Sword");
-trigger.TitleColor = Color.cyan;
-trigger.HoverDelay = 1.0f;
+
+if (trigger != null)
+{
+    // Custom Style
+    trigger.BackgroundColor = Color.black;
+    trigger.ShowOutline = true;
+    trigger.OutlineColor = Color.cyan;
+
+    // Fixed Position (Top Right of the target)
+    trigger.PositionMode = TooltipPositionMode.Fixed;
+    trigger.AnchorPosition = TooltipAnchor.TopRight;
+}
 ```
 
 *(See the Demo Scene in `Assets/Easy Tooltip/Demo` for live examples of both methods.)*
@@ -69,15 +83,15 @@ trigger.HoverDelay = 1.0f;
 
 ### **3. Core Components**
 
-*   **`TooltipTrigger`:** The main component you add to your UI elements. It holds the content for a tooltip.
-*   **`TooltipManager`:** The "brain" of the system. It is created automatically from the prefab in your `Resources` folder.
-*   **`Tooltip` Prefab:** The visual prefab for the tooltip. You can edit it to change the default fonts, background, etc. It is located in `Assets/Easy Tooltip/Prefabs/`.
+*   **`TooltipTrigger`:** The main component you add to your UI elements. It holds content, style overrides, position settings, and event hooks.
+*   **`TooltipManager`:** The "brain" of the system. It handles instantiation, global defaults, smart positioning, and animation logic automatically.
+*   **`Tooltip` Prefab:** The visual prefab for the tooltip. You can edit it to change the default fonts, padding, or sprite slicing. It is located in `Assets/Easy Tooltip/Prefabs/`.
 
 ---
 
 ### **4. Configuration**
 
-You can configure global settings (Max Width, Fade Speed, etc.) in two ways:
+You can configure global settings (Max Width, Fade Speed, Default Colors) in two ways:
 
 **1. Global Settings (Recommended):**
 Edit the **`TooltipManager` prefab** directly. This changes the defaults for your whole project.
@@ -90,12 +104,23 @@ Drag the `TooltipManager` prefab into a scene's hierarchy to use different setti
 
 ### **5. FAQ & Support**
 
-**Q: My tooltip is appearing behind my other UI!**
-A: The system automatically places the tooltip on top of all other UI on the same Canvas. If you are using multiple Canvases, ensure the Canvas the tooltip is on has a higher "Sort Order" in its Inspector.
+**Q: My tooltip isn't showing up when I hover. Why?**
+A: Ensure the UI element with the `TooltipTrigger` has an `Image` or `Text` component with **Raycast Target** checked. Also, make sure no other invisible UI elements are blocking the raycast in front of it.
 
-**Q: My tooltip's positioning is slightly off when I use a UI Outline.**
-A: This is handled automatically! The positioning system detects if the tooltip prefab uses an `Outline` component and adjusts its on-screen clamping to make sure the outline is never cut off.
+**Q: Does it work with the New Input System?**
+A: Yes. The asset uses preprocessor directives to automatically detect and support both the Legacy Input Manager and the New Input System package. No setup is required.
 
-**Contact for support or feature requests:**
-*   LinkedIn: https://www.linkedin.com/in/ahmedbenlakhdhar
-*   ArtStation: https://www.artstation.com/ahmedbenlakhdhar
+**Q: Does this work with multiple Canvases or World Space UI?**
+A: Yes. The system automatically detects which Canvas the hovered object belongs to and ensures the tooltip is rendered on the correct layer and coordinate space.
+
+**Q: How does "Fixed" positioning handle screen edges?**
+A: The manager uses "Smart Flipping." If a tooltip anchored to the "Top" goes off-screen, it will automatically try to flip to the "Bottom." If it still doesn't fit, it clamps to the screen edge.
+
+⭐⭐⭐⭐⭐ **Leave a Rating**
+
+If Easy Tooltip saves you time and helps your project, please consider leaving a 5-star review on the [Asset Store page](https://assetstore.unity.com/packages/tools/gui/easy-tooltip-329113#reviews). It helps the asset grow immensely.
+
+**Need Support?**  
+Email is the fastest way to reach me. If you encounter any bugs, need help, or have feature requests, please contact me directly *before* leaving a review so I can resolve it for you immediately:
+*   **Email:** ahmedbenlakhdhar [at] gmail [dot] com  
+*(Please include "[Easy Tooltip]" in the email subject line so it doesn't get caught in spam.)*

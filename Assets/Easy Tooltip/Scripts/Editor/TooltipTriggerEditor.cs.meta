@@ -1,9 +1,9 @@
 fileFormatVersion: 2
-guid: f8a49ced63d0dce4188eba50287e6725
+guid: 566a1b7bada3365499e6f232c4af72fa
 AssetOrigin:
   serializedVersion: 1
   productId: 329113
   packageName: Easy Tooltip
   packageVersion: 2.0
-  assetPath: Assets/Easy Tooltip/Scripts/Tooltip.cs
+  assetPath: Assets/Easy Tooltip/Scripts/Editor/TooltipTriggerEditor.cs
   uploadId: 846488

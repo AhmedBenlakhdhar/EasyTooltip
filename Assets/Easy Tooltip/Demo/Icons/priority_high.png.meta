@@ -1,10 +1,13 @@
 fileFormatVersion: 2
-guid: 553683394d94a5c43918a6d880e52029
+guid: b3eed53e5bdd4fc45b8f414dd9896bd3
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7253594467464365193
-    second: add_circle_0
+      213: -6447214195121325342
+    second: priority_high_0
+  - first:
+      213: -9047532581806008609
+    second: priority_high_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +49,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -97,6 +100,19 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
     buildTarget: WebGL
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -113,13 +129,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: add_circle_0
+      name: priority_high_0
       rect:
         serializedVersion: 2
-        x: 1
-        y: 1
-        width: 22
-        height: 22
+        x: 9
+        y: 8
+        width: 6
+        height: 14
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +144,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 77b3c06534e065b90800000000000000
-      internalID: -7253594467464365193
+      spriteID: 2eaffec29d4e686a0800000000000000
+      internalID: -6447214195121325342
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: priority_high_1
+      rect:
+        serializedVersion: 2
+        x: 9
+        y: 2
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd61eaf7d05b07280800000000000000
+      internalID: -9047532581806008609
       vertices: []
       indices: 
       edges: []
@@ -138,7 +176,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -147,9 +185,18 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      priority_high_0: -6447214195121325342
+      priority_high_1: -9047532581806008609
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 329113
+  packageName: Easy Tooltip
+  packageVersion: 2.0
+  assetPath: Assets/Easy Tooltip/Demo/Icons/priority_high.png
+  uploadId: 846488

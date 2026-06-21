@@ -1,31 +1,30 @@
-namespace PixeLadder.SimpleTooltip
+namespace PixeLadder.EasyTooltip
 {
     using UnityEngine;
     using UnityEngine.UI;
     using TMPro;
 
-    /// <summary>
-    /// A simple "view" component that displays tooltip data. It is controlled by the TooltipManager.
-    /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
+    [AddComponentMenu("PixeLadder/Easy Tooltip/Tooltip View")]
     public class Tooltip : MonoBehaviour
     {
-        [Header("UI References")]
-        [Tooltip("The parent object for the title and icon. Can be hidden if both are absent.")]
+        [Header("Content References")]
+        [Tooltip("Parent object for title/icon.")]
         [SerializeField] private GameObject header;
-        [Tooltip("The TextMeshPro component for the title text.")]
         [SerializeField] public TextMeshProUGUI titleField;
-        [Tooltip("The TextMeshPro component for the main content text.")]
         [SerializeField] public TextMeshProUGUI contentField;
-        [Tooltip("The Image component for the icon.")]
         [SerializeField] private Image iconField;
 
-        /// <summary>
-        /// Populates the UI elements with the provided content and styles. This method is null-safe.
-        /// </summary>
-        public void SetText(string content, string title = "", Sprite icon = null, Color? titleColor = null, Color? iconColor = null)
+        [Header("Style References")]
+        [Tooltip("The main background image.")]
+        [SerializeField] private Image backgroundImage;
+
+        [Tooltip("The separate sliced image used for the border/outline.")]
+        [SerializeField] private Image outlineImage;
+
+        public void SetContent(string content, string title = "", Sprite icon = null, Color? titleColor = null, Color? iconColor = null)
         {
-            // Set Title (null-safe)
+            // 1. Title
             bool hasTitle = !string.IsNullOrEmpty(title);
             if (titleField != null)
             {
@@ -37,13 +36,13 @@ namespace PixeLadder.SimpleTooltip
                 }
             }
 
-            // Set Content (null-safe)
+            // 2. Content
             if (contentField != null)
             {
                 contentField.text = content ?? string.Empty;
             }
 
-            // Set Icon (null-safe)
+            // 3. Icon
             bool hasIcon = (icon != null);
             if (iconField != null)
             {
@@ -55,10 +54,26 @@ namespace PixeLadder.SimpleTooltip
                 }
             }
 
-            // Conditionally hide the entire header area
-            if (header != null)
+            // 4. Header Container
+            if (header != null) header.SetActive(hasTitle || hasIcon);
+        }
+
+        public void SetStyle(Color backgroundColor, Color outlineColor, bool showOutline)
+        {
+            if (backgroundImage != null)
             {
-                header.SetActive(hasTitle || hasIcon);
+                backgroundImage.color = backgroundColor;
+            }
+
+            if (outlineImage != null)
+            {
+                // Toggle the GameObject to ensure efficient rendering
+                outlineImage.gameObject.SetActive(showOutline);
+
+                if (showOutline)
+                {
+                    outlineImage.color = outlineColor;
+                }
             }
         }
     }
